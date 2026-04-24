@@ -1,9 +1,12 @@
 #ifndef NODE_H
 #define NODE_H
 
+#include <pthread.h>
+
 #define MAX_NEIGHBORS 10
+#define MAX_NODES 10
 #define MAX_LINE 256
-#define MSS 1460  // Maximum Segment Size in bytes
+#define MSS 1460
 
 // TCP Congestion Control Algorithms
 typedef enum {
@@ -22,31 +25,51 @@ typedef enum {
 
 // Neighbor structure for routing
 typedef struct {
-    char id;           // Neighbor node ID (A, B, C, etc.)
-    char ip[64];       // IP address
-    int port;          // Port number
-    int cost;          // Link cost
+    char id;
+    char ip[64];
+    int port;
+    int cost;
 } Neighbor;
 
-// Node configuration
+// Routing table entry
 typedef struct {
-    char node_id;                      // This node's ID
-    int port;                          // This node's port
-    Neighbor neighbors[MAX_NEIGHBORS]; // Array of neighbors
-    int neighbor_count;                // Number of neighbors
-} NodeConfig;
+    char dest;
+    char next_hop;
+    int cost;
+} RoutingEntry;
+
+// Network packet
+typedef struct {
+    char src;
+    char dest;
+    int seq_num;
+    char data[1024];
+} Packet;
 
 // TCP State for congestion control
 typedef struct {
-    Algorithm algorithm;     // Which algorithm (Tahoe, Reno, NewReno)
-    CCState state;          // Current state (Slow Start, Congestion Avoidance, Fast Recovery)
-    double cwnd;            // Congestion window (in MSS units)
-    double ssthresh;        // Slow start threshold (in MSS units)
-    int dup_ack_count;      // Count of duplicate ACKs
-    int round;              // Current round/step number
-    int recover_seq;        // Highest seq number when entering Fast Recovery (for NewReno)
-    int last_ack;           // Last ACK number received
+    Algorithm algorithm;
+    CCState state;
+    double cwnd;
+    double ssthresh;
+    int dup_ack_count;
+    int round;
+    int recover_seq;
+    int last_ack;
+    int next_seq;
 } TCPState;
+
+// Node configuration
+typedef struct {
+    char node_id;
+    int port;
+    Neighbor neighbors[MAX_NEIGHBORS];
+    int neighbor_count;
+    RoutingEntry routing_table[MAX_NODES];
+    int routing_table_size;
+    TCPState tcp;
+    pthread_mutex_t lock;
+} NodeConfig;
 
 // Function declarations
 Algorithm parse_algorithm(const char *name);
@@ -57,5 +80,10 @@ void init_tcp(TCPState *tcp, Algorithm algorithm);
 void on_ack(TCPState *tcp, int ack_no);
 void on_duplicate_ack(TCPState *tcp, int ack_no);
 void on_timeout(TCPState *tcp);
+void init_routing_table(NodeConfig *config);
+void print_routing_table(NodeConfig *config);
+void *listen_thread(void *arg);
+void send_message(NodeConfig *config, char dest, const char *message);
+void interactive_shell(NodeConfig *config);
 
-#endif // NODE_H
+#endif 

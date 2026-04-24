@@ -276,7 +276,7 @@ typedef struct {
 ## Video Demonstration Script
 
 ### Part 1: Introduction (30 seconds)
-"Hello, this is our TCP Congestion Control implementation for CSE 320. We've implemented TCP Tahoe, Reno, and NewReno algorithms."
+"Hello, this is our TCP Congestion Control implementation for CSE 320. We've implemented TCP Tahoe algorithm."
 
 ### Part 2: Compilation (15 seconds)
 ```bash
@@ -337,6 +337,7 @@ make
 
 ## Authors
 CSE 320 Computer Networks Programming Assignment
-[Your Names and Student IDs]
+Zeynep Tanrıvermiş 
+Defne Demir
 
 **Last Updated**: April 2026
