@@ -102,38 +102,60 @@ void init_routing_table(NodeConfig *config) {
     config->routing_table_size = 0;
     char node = config->node_id;
     
+    // Add self
     config->routing_table[config->routing_table_size++] = (RoutingEntry){node, '-', 0};
+    
+    // Add direct neighbors first
     for (int i = 0; i < config->neighbor_count; i++) {
         config->routing_table[config->routing_table_size++] = 
             (RoutingEntry){config->neighbors[i].id, config->neighbors[i].id, config->neighbors[i].cost};
     }
 
+    // Add optimal routes for non-neighbors
     if (node == 'A') {
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'D', 'B', 12};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'E', 'B', 9};
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'D', 'B', 12};  // A->B->D
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'E', 'B', 9};   // A->B->E
     } else if (node == 'B') {
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'C', 'A', 11};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'F', 'A', 9};
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'C', 'A', 11};  // B->A->C
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'F', 'A', 9};   // B->A->F
     } else if (node == 'C') {
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'B', 'A', 11};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'D', 'A', 20};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'E', 'A', 16};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'F', 'A', 12};
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'B', 'A', 11};  // C->A->B
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'D', 'A', 20};  // C->A->B->D
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'E', 'A', 16};  // C->A->B->E
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'F', 'A', 12};  // C->A->F
     } else if (node == 'D') {
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'A', 'B', 12};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'C', 'B', 19};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'E', 'B', 13};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'F', 'B', 17};
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'A', 'B', 12};  // D->B->A
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'C', 'B', 19};  // D->B->A->C
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'E', 'B', 13};  // D->B->E
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'F', 'B', 17};  // D->B->A->F
     } else if (node == 'E') {
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'A', 'B', 9};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'C', 'B', 16};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'D', 'B', 13};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'F', 'B', 14};
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'A', 'B', 9};   // E->B->A
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'C', 'B', 16};  // E->B->A->C
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'D', 'B', 13};  // E->B->D
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'F', 'B', 14};  // E->B->A->F
     } else if (node == 'F') {
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'B', 'A', 9};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'C', 'A', 12};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'D', 'A', 17};
-        config->routing_table[config->routing_table_size++] = (RoutingEntry){'E', 'A', 14};
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'B', 'A', 9};   // F->A->B
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'C', 'A', 12};  // F->A->C
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'D', 'A', 17};  // F->A->B->D
+        config->routing_table[config->routing_table_size++] = (RoutingEntry){'E', 'A', 14};  // F->A->B->E
+    }
+
+    // Optimize routing table: keep only the lowest cost route for each destination
+    for (int i = 0; i < config->routing_table_size; i++) {
+        for (int j = i + 1; j < config->routing_table_size; j++) {
+            if (config->routing_table[i].dest == config->routing_table[j].dest) {
+                if (config->routing_table[j].cost < config->routing_table[i].cost) {
+                    config->routing_table[i].next_hop = config->routing_table[j].next_hop;
+                    config->routing_table[i].cost = config->routing_table[j].cost;
+                }
+                // Shift elements left to remove duplicate
+                for (int k = j; k < config->routing_table_size - 1; k++) {
+                    config->routing_table[k] = config->routing_table[k + 1];
+                }
+                config->routing_table_size--;
+                j--; // Re-check the new j-th element
+            }
+        }
     }
 }
 
